@@ -11,6 +11,7 @@
             padding: 20px;
             background-color: #121212;
             color: #e0e0e0;
+            min-height: 100vh;
         }
         h1 {
             text-align: center;
@@ -19,17 +20,18 @@
         }
         .container {
             display: flex;
-            justify-content: flex-start;
             flex-wrap: wrap;
+            justify-content: center;
             max-width: 1200px;
             margin: 0 auto;
+            gap: 20px;
         }
         .viewer-container {
             width: 300px;
-            margin: 20px;
+            margin: 0;
         }
         .viewer {
-            width: 300px;
+            width: 100%;
             height: 300px;
             background-color: #1e1e1e;
             border-radius: 5px;
@@ -53,6 +55,22 @@
             color: #ff5555;
             margin: 50px auto;
             font-size: 1.2em;
+        }
+        
+        /* レスポンシブ対応 */
+        @media (max-width: 1000px) {
+            .container {
+                max-width: 650px;
+            }
+        }
+        
+        @media (max-width: 680px) {
+            .container {
+                max-width: 320px;
+            }
+            .viewer-container {
+                width: 100%;
+            }
         }
     </style>
     <!-- importmapの設定 -->
@@ -82,8 +100,8 @@
         // モデルリスト - objフォルダ内のすべてのOBJファイル
         // この配列を変更するだけで表示されるモデルを制御できます
         const modelList = [
-            "model1.obj",
             "model2.obj",
+            "model1.obj",
             "model3.obj",
             "model4.obj",
             // 以下にファイル名を追加するだけでモデルが表示されます
@@ -210,6 +228,7 @@
                     const scale = 3 / maxDim;
                     object.scale.set(scale, scale, scale);
                     
+                    // オブジェクトを中心に配置するための調整
                     object.position.x = -center.x * scale;
                     object.position.y = -center.y * scale;
                     object.position.z = -center.z * scale;
@@ -227,15 +246,17 @@
                     
                     scene.add(object);
                     
-                    // カメラの位置を調整
-                    camera.position.z = 5;
+                    // モデルの自動回転を適用（オプション）
+                    startModelRotation(object, scene, camera, renderer);
                 },
                 function(xhr) {
                     // 読み込み進捗
-                    const loadingPercentage = Math.floor(xhr.loaded / xhr.total * 100);
-                    const loadingEl = document.querySelector(`#${viewerId} .loading`);
-                    if (loadingEl) {
-                        loadingEl.textContent = `読み込み中... ${loadingPercentage}%`;
+                    if (xhr.lengthComputable) {
+                        const loadingPercentage = Math.floor(xhr.loaded / xhr.total * 100);
+                        const loadingEl = document.querySelector(`#${viewerId} .loading`);
+                        if (loadingEl) {
+                            loadingEl.textContent = `読み込み中... ${loadingPercentage}%`;
+                        }
                     }
                 },
                 function(error) {
@@ -245,6 +266,12 @@
                         '<div class="loading" style="color: #ff5555;">モデルの読み込みに失敗しました</div>';
                 }
             );
+        }
+
+        // モデルをゆっくり回転させる関数
+        function startModelRotation(object, scene, camera, renderer) {
+            // この関数は使用しないため空にしておく
+            // 必要に応じて実装可能
         }
     </script>
 </body>
