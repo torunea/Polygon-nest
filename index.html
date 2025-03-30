@@ -100,30 +100,18 @@
         const scenes = [];
         let isAnimating = false;
         let animationFrameId = null;
-        let isMobileDevice = false;
-        
-        // モバイルデバイス判定
-        checkMobileDevice();
         
         // モデルリスト - objフォルダ内のすべてのOBJファイル
-        // モバイルデバイスの場合は表示数を減らす
-        const modelList = isMobileDevice ? 
-            ["model1.obj", "model2.obj"] : // モバイルでは2つだけ表示
-            ["model1.obj", "model2.obj", "model3.obj", "model4.obj"]; // PCでは4つ表示
-        
-        // モバイルデバイス判定関数
-        function checkMobileDevice() {
-            const userAgent = navigator.userAgent || navigator.vendor || window.opera;
-            
-            // モバイルデバイスの判定
-            if (/android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase())) {
-                isMobileDevice = true;
-                console.log('モバイルデバイスを検出しました');
-            } else {
-                isMobileDevice = false;
-                console.log('デスクトップデバイスを検出しました');
-            }
-        }
+        // この配列を変更するだけで表示されるモデルを制御できます
+        const modelList = [
+            "model1.obj",
+            "model2.obj",
+            "model3.obj",
+            "model4.obj",
+            // 以下にファイル名を追加するだけでモデルが表示されます
+            // "model5.obj",
+            // "model6.obj"
+        ];
         
         // モデルを見つける
         findModels();
@@ -166,6 +154,9 @@
             
             // イベントリスナーの設定
             setupEventListeners();
+            
+            // 初期レンダリングを開始
+            startRenderLoop();
         }
         
         // 交差監視を設定する関数
@@ -313,17 +304,11 @@
 
             // レンダラーの作成
             const renderer = new THREE.WebGLRenderer({ 
-                antialias: !isMobileDevice, // モバイルではアンチエイリアスを無効化
+                antialias: true,
                 powerPreference: 'high-performance' // パフォーマンス設定を追加
             });
             renderer.setSize(width, height);
-            
-            // モバイルデバイスでは低解像度で表示
-            if (isMobileDevice) {
-                renderer.setPixelRatio(1);
-            } else {
-                renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // 最大2倍までに制限
-            }
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // 最大2倍までに制限
             
             // コンテナ内のローディング表示を削除し、レンダラーを追加
             container.innerHTML = '';
@@ -435,18 +420,11 @@
                         // モデルを白色に設定
                         object.traverse(function(child) {
                             if (child instanceof THREE.Mesh) {
-                                // モバイルデバイスではより単純なマテリアルを使用
-                                if (isMobileDevice) {
-                                    child.material = new THREE.MeshBasicMaterial({
-                                        color: 0xffffff
-                                    });
-                                } else {
-                                    child.material = new THREE.MeshStandardMaterial({
-                                        color: 0xffffff,
-                                        roughness: 0.5,
-                                        metalness: 0.2
-                                    });
-                                }
+                                child.material = new THREE.MeshStandardMaterial({
+                                    color: 0xffffff,
+                                    roughness: 0.5,
+                                    metalness: 0.2
+                                });
                             }
                         });
                         
@@ -501,13 +479,6 @@
                 }
             });
         });
-        
-        // 60秒ごとにメモリ使用量をチェック（デバッグ用）
-        if (typeof performance !== 'undefined' && performance.memory) {
-            setInterval(() => {
-                console.log('メモリ使用量:', performance.memory.usedJSHeapSize / 1048576, 'MB');
-            }, 60000);
-        }
     </script>
 </body>
 </html>
