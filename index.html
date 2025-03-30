@@ -112,7 +112,6 @@
             { obj: "HOUSE-table.obj", mtl: "model4.mtl" },
             { obj: "SG-table.obj", mtl: "model5.mtl" },
             { obj: "HOUSE-toaster2.obj", mtl: "HOUSE-toaster2.mtl" },
-            { obj: "CS-icebox.obj", mtl:"CS-icebox.mtl" },
         ];
         
         // モデルを見つける
@@ -308,7 +307,8 @@
             // レンダラーの作成
             const renderer = new THREE.WebGLRenderer({ 
                 antialias: true,
-                powerPreference: 'high-performance' // パフォーマンス設定を追加
+                powerPreference: 'high-performance', // パフォーマンス設定を追加
+                alpha: true // 透明度対応
             });
             renderer.setSize(width, height);
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // 最大2倍までに制限
@@ -408,6 +408,13 @@
             const mtlLoader = new MTLLoader();
             mtlLoader.setPath('obj/');
             
+            // マテリアルパラメータの設定
+            mtlLoader.setMaterialOptions({
+                side: THREE.DoubleSide,
+                transparent: true, // 透明度を有効化
+                opacity: 1.0      // デフォルトの不透明度
+            });
+            
             // MTLファイルを読み込む
             mtlLoader.load(
                 mtlPath.split('/').pop(), // ファイル名のみを使用
@@ -445,13 +452,33 @@
                                     object.position.y = -center.y * scale;
                                     object.position.z = -center.z * scale;
                                     
-                                    // MTLファイルが存在しない場合や無効な場合は、白色のマテリアルを適用
+                                    // マテリアルがある場合は、透明度関連のプロパティを確認・調整
                                     let hasMaterial = false;
                                     object.traverse(function(child) {
                                         if (child instanceof THREE.Mesh) {
                                             if (child.material instanceof THREE.MeshPhongMaterial || 
                                                 child.material instanceof THREE.MeshStandardMaterial ||
+                                                child.material instanceof THREE.MeshLambertMaterial ||
                                                 Array.isArray(child.material)) {
+                                                
+                                                // マテリアルの処理
+                                                if (Array.isArray(child.material)) {
+                                                    // マテリアル配列の場合
+                                                    child.material.forEach(mat => {
+                                                        if (mat) {
+                                                            // 透明度が設定されている場合は透明処理を有効化
+                                                            if (mat.opacity !== undefined && mat.opacity < 1.0) {
+                                                                mat.transparent = true;
+                                                            }
+                                                        }
+                                                    });
+                                                } else {
+                                                    // 単一マテリアルの場合
+                                                    if (child.material.opacity !== undefined && child.material.opacity < 1.0) {
+                                                        child.material.transparent = true;
+                                                    }
+                                                }
+                                                
                                                 hasMaterial = true;
                                             }
                                         }
@@ -462,7 +489,9 @@
                                         object.traverse(function(child) {
                                             if (child instanceof THREE.Mesh) {
                                                 child.material = new THREE.MeshLambertMaterial({
-                                                    color: 0xffffff
+                                                    color: 0xffffff,
+                                                    transparent: true,
+                                                    opacity: 1.0
                                                 });
                                             }
                                         });
@@ -570,7 +599,9 @@
                         object.traverse(function(child) {
                             if (child instanceof THREE.Mesh) {
                                 child.material = new THREE.MeshLambertMaterial({
-                                    color: 0xffffff
+                                    color: 0xffffff,
+                                    transparent: true,
+                                    opacity: 1.0
                                 });
                             }
                         });
