@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OBJファイルビューワー (unpkg使用)</title>
+    <title>OBJファイルビューワー (importmap使用)</title>
     <style>
         body {
             font-family: 'Arial', sans-serif;
@@ -46,9 +46,18 @@
             color: #666;
         }
     </style>
+    <!-- importmapの設定 -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.155.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.155.0/examples/jsm/"
+        }
+    }
+    </script>
 </head>
 <body>
-    <h1>OBJファイルビューワー (unpkg使用)</h1>
+    <h1>OBJファイルビューワー (importmap使用)</h1>
     <div class="container">
         <div class="viewer-container">
             <div class="viewer" id="viewer1">
@@ -70,13 +79,13 @@
         </div>
     </div>
 
-    <!-- unpkgを使用したモジュール版Three.jsのスクリプト -->
+    <!-- モジュールスクリプト - importmapを使用 -->
     <script type="module">
-        // Three.jsとその他のモジュールをunpkgからインポート
-        import * as THREE from 'https://unpkg.com/three@0.128.0/build/three.module.js';
-        import { OrbitControls } from 'https://unpkg.com/three@0.128.0/examples/jsm/controls/OrbitControls.js';
-        import { OBJLoader } from 'https://unpkg.com/three@0.128.0/examples/jsm/loaders/OBJLoader.js';
-        import { MTLLoader } from 'https://unpkg.com/three@0.128.0/examples/jsm/loaders/MTLLoader.js';
+        // Three.jsとその他のモジュールをimportmapを使用してインポート
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+        import { MTLLoader } from 'three/addons/loaders/MTLLoader.js';
 
         // シーン、カメラ、レンダラーを作成する関数
         function createScene(containerId) {
