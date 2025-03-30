@@ -95,6 +95,7 @@
         import * as THREE from 'three';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
         import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+        import { MTLLoader } from 'three/addons/loaders/MTLLoader.js';
 
         // グローバルシーン管理と変数
         const scenes = [];
@@ -103,17 +104,17 @@
         
         // モデルリスト - objフォルダ内のすべてのOBJファイル
         // この配列を変更するだけで表示されるモデルを制御できます
+        // OBJファイルとMTLファイルの両方を指定する必要があります
         const modelList = [
-            "SG-shelf.obj",
-            "SG-table.obj",
-            "HOUSE-table.obj",
-            "HOUSE-toaster.obj",
-            "HOUSE-oven.obj",
-            "EQ-outdoor.obj",
-            "EQ-washer.obj",
+            { obj: "EQ-outdoor.obj", mtl: "model1.mtl" },
+            { obj: "EQ-washer.obj", mtl: "model2.mtl" },
+            { obj: "HOUSE-oven.obj", mtl: "model3.mtl" },
+            { obj: "HOUSE-table.obj", mtl: "model4.mtl" },
+            { obj: "SG-table.obj", mtl: "model5.mtl" },
+            { obj: "HOUSE-toaster2.obj", mtl: "HOUSE-toaster2.mtl" },
+
             // 以下にファイル名を追加するだけでモデルが表示されます
-            // "model5.obj",
-            // "model6.obj"
+            // { obj: "model5.obj", mtl: "model5.mtl" },
         ];
         
         // モデルを見つける
@@ -131,8 +132,9 @@
             
             // モデルを順番に読み込む
             for (let i = 0; i < modelList.length; i++) {
-                const filename = modelList[i];
-                const objPath = `obj/${filename}`;
+                const model = modelList[i];
+                const objPath = `obj/${model.obj}`;
+                const mtlPath = `obj/${model.mtl}`;
                 
                 // 新しいビューアコンテナを作成
                 const viewerId = `viewer-${i}`;
@@ -144,12 +146,12 @@
                     <div class="viewer" id="${viewerId}">
                         <div class="loading">読み込み中...</div>
                     </div>
-                    <div class="title" id="${titleId}">${getFilenameWithoutExtension(filename)}</div>
+                    <div class="title" id="${titleId}">${getFilenameWithoutExtension(model.obj)}</div>
                 `;
                 container.appendChild(viewerContainer);
                 
-                // OBJファイルをロード
-                loadOBJ(viewerId, objPath, titleId, i);
+                // OBJファイルとMTLファイルをロード
+                loadOBJWithMTL(viewerId, objPath, mtlPath, titleId, i);
             }
 
             // Intersection Observerを設定して可視性を監視
@@ -390,20 +392,168 @@
             return filename.split('.')[0];
         }
 
-        // OBJファイルを読み込む関数
-        function loadOBJ(viewerId, objPath, titleId, index) {
+        // OBJファイルとMTLファイルを読み込む関数
+        function loadOBJWithMTL(viewerId, objPath, mtlPath, titleId, index) {
             // シーンを作成
             const sceneInfo = createScene(viewerId, index);
             if (!sceneInfo) return;
             
             const { scene, camera, renderer } = sceneInfo;
             
+            // ローディング表示のアップデート
+            const loadingEl = document.querySelector(`#${viewerId} .loading`);
+            if (loadingEl) {
+                loadingEl.textContent = `マテリアル読み込み中...`;
+            }
+            
+            // MTLローダーを作成
+            const mtlLoader = new MTLLoader();
+            mtlLoader.setPath('obj/');
+            
+            // MTLファイルを読み込む
+            mtlLoader.load(
+                mtlPath.split('/').pop(), // ファイル名のみを使用
+                function(materials) {
+                    try {
+                        // マテリアルを準備
+                        materials.preload();
+                        
+                        // ローディング表示のアップデート
+                        if (loadingEl) {
+                            loadingEl.textContent = `モデル読み込み中...`;
+                        }
+                        
+                        // OBJローダーを作成し、読み込んだマテリアルを設定
+                        const objLoader = new OBJLoader();
+                        objLoader.setMaterials(materials);
+                        objLoader.setPath('obj/');
+                        
+                        // OBJファイルを読み込む
+                        objLoader.load(
+                            objPath.split('/').pop(), // ファイル名のみを使用
+                            function(object) {
+                                try {
+                                    // オブジェクトが読み込まれたら、適切なサイズに合わせる
+                                    const box = new THREE.Box3().setFromObject(object);
+                                    const size = box.getSize(new THREE.Vector3());
+                                    const center = box.getCenter(new THREE.Vector3());
+                                    
+                                    const maxDim = Math.max(size.x, size.y, size.z);
+                                    const scale = 3 / maxDim;
+                                    object.scale.set(scale, scale, scale);
+                                    
+                                    // オブジェクトを中心に配置するための調整
+                                    object.position.x = -center.x * scale;
+                                    object.position.y = -center.y * scale;
+                                    object.position.z = -center.z * scale;
+                                    
+                                    // MTLファイルが存在しない場合や無効な場合は、白色のマテリアルを適用
+                                    let hasMaterial = false;
+                                    object.traverse(function(child) {
+                                        if (child instanceof THREE.Mesh) {
+                                            if (child.material instanceof THREE.MeshPhongMaterial || 
+                                                child.material instanceof THREE.MeshStandardMaterial ||
+                                                Array.isArray(child.material)) {
+                                                hasMaterial = true;
+                                            }
+                                        }
+                                    });
+                                    
+                                    // マテリアルが適用されていない場合は白色のマテリアルを適用
+                                    if (!hasMaterial) {
+                                        object.traverse(function(child) {
+                                            if (child instanceof THREE.Mesh) {
+                                                child.material = new THREE.MeshStandardMaterial({
+                                                    color: 0xffffff,
+                                                    roughness: 0.5,
+                                                    metalness: 0.2
+                                                });
+                                            }
+                                        });
+                                    }
+                                    
+                                    scene.add(object);
+                                    
+                                    // モデル追加後に一度だけレンダリング（静止画を表示）
+                                    renderer.render(scene, camera);
+                                    
+                                } catch (error) {
+                                    console.error('モデルの処理中にエラーが発生しました:', error);
+                                    
+                                    // エラーメッセージを表示
+                                    const viewerEl = document.getElementById(viewerId);
+                                    if (viewerEl) {
+                                        viewerEl.innerHTML = 
+                                            '<div class="loading" style="color: #ff5555;">モデルの処理に失敗しました</div>';
+                                    }
+                                }
+                            },
+                            // 読み込み進捗
+                            function(xhr) {
+                                if (xhr.lengthComputable) {
+                                    const loadingPercentage = Math.floor(xhr.loaded / xhr.total * 100);
+                                    const loadingEl = document.querySelector(`#${viewerId} .loading`);
+                                    if (loadingEl) {
+                                        loadingEl.textContent = `モデル読み込み中... ${loadingPercentage}%`;
+                                    }
+                                }
+                            },
+                            // エラーハンドリング
+                            function(error) {
+                                console.error(`モデル "${objPath}" の読み込みに失敗しました:`, error);
+                                const viewerEl = document.getElementById(viewerId);
+                                if (viewerEl) {
+                                    viewerEl.innerHTML = 
+                                        '<div class="loading" style="color: #ff5555;">モデルの読み込みに失敗しました</div>';
+                                }
+                            }
+                        );
+                    } catch (error) {
+                        console.error('マテリアルの処理中にエラーが発生しました:', error);
+                        
+                        // エラー時は通常のOBJローダーでフォールバック
+                        loadOBJWithoutMTL(viewerId, objPath, titleId, index);
+                    }
+                },
+                // マテリアル読み込み進捗
+                function(xhr) {
+                    if (xhr.lengthComputable) {
+                        const loadingPercentage = Math.floor(xhr.loaded / xhr.total * 100);
+                        const loadingEl = document.querySelector(`#${viewerId} .loading`);
+                        if (loadingEl) {
+                            loadingEl.textContent = `マテリアル読み込み中... ${loadingPercentage}%`;
+                        }
+                    }
+                },
+                // マテリアル読み込みエラー
+                function(error) {
+                    console.error(`マテリアル "${mtlPath}" の読み込みに失敗しました:`, error);
+                    
+                    // MTLファイルの読み込みに失敗した場合は、通常のOBJローダーでフォールバック
+                    loadOBJWithoutMTL(viewerId, objPath, titleId, index);
+                }
+            );
+        }
+        
+        // MTLファイルなしでOBJファイルを読み込む関数（フォールバック用）
+        function loadOBJWithoutMTL(viewerId, objPath, titleId, index) {
+            const sceneInfo = scenes[index];
+            if (!sceneInfo) return;
+            
+            const { scene, camera, renderer } = sceneInfo;
+            
+            // ローディング表示のアップデート
+            const loadingEl = document.querySelector(`#${viewerId} .loading`);
+            if (loadingEl) {
+                loadingEl.textContent = `モデル読み込み中（マテリアルなし）...`;
+            }
+            
             // OBJローダーを作成
             const loader = new OBJLoader();
             
             // モデルを読み込む
             loader.load(
-                objPath, // OBJファイルのパス
+                objPath,
                 function(object) {
                     try {
                         // オブジェクトが読み込まれたら、適切なサイズに合わせる
@@ -438,6 +588,13 @@
                         
                     } catch (error) {
                         console.error('モデルの処理中にエラーが発生しました:', error);
+                        
+                        // エラーメッセージを表示
+                        const viewerEl = document.getElementById(viewerId);
+                        if (viewerEl) {
+                            viewerEl.innerHTML = 
+                                '<div class="loading" style="color: #ff5555;">モデルの処理に失敗しました</div>';
+                        }
                     }
                 },
                 function(xhr) {
@@ -446,7 +603,7 @@
                         const loadingPercentage = Math.floor(xhr.loaded / xhr.total * 100);
                         const loadingEl = document.querySelector(`#${viewerId} .loading`);
                         if (loadingEl) {
-                            loadingEl.textContent = `読み込み中... ${loadingPercentage}%`;
+                            loadingEl.textContent = `モデル読み込み中... ${loadingPercentage}%`;
                         }
                     }
                 },
