@@ -1,10 +1,187 @@
-<script async src="https://unpkg.com/es-module-shims@1.5.8/dist/es-module-shims.js"></script>
-<script type="importmap">
-   {
-       "imports": {
-           "three": "https://unpkg.com/three@0.142.0/build/three.module.js"
-       }
-   }
-</script>
- 
-<script src="./js/main.js" type="module"></script>
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OBJファイルビューワー (unpkg使用)</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .container {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .viewer-container {
+            width: 300px;
+            margin: 20px;
+        }
+        .viewer {
+            width: 300px;
+            height: 300px;
+            background-color: #eee;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        .title {
+            text-align: center;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <h1>OBJファイルビューワー (unpkg使用)</h1>
+    <div class="container">
+        <div class="viewer-container">
+            <div class="viewer" id="viewer1">
+                <div class="loading">読み込み中...</div>
+            </div>
+            <div class="title">モデル1</div>
+        </div>
+        <div class="viewer-container">
+            <div class="viewer" id="viewer2">
+                <div class="loading">読み込み中...</div>
+            </div>
+            <div class="title">モデル2</div>
+        </div>
+        <div class="viewer-container">
+            <div class="viewer" id="viewer3">
+                <div class="loading">読み込み中...</div>
+            </div>
+            <div class="title">モデル3</div>
+        </div>
+    </div>
+
+    <!-- unpkgを使用したモジュール版Three.jsのスクリプト -->
+    <script async src="https://unpkg.com/es-module-shims@1.5.8/dist/es-module-shims.js"></script>
+    <script type="module">
+        // Three.jsとその他のモジュールをunpkgからインポート
+        import * as THREE from 'https://unpkg.com/three@0.142.0/build/three.module.js';
+        import { OrbitControls } from 'https://unpkg.com/three@0.142.0/examples/jsm/controls/OrbitControls.js';
+        import { OBJLoader } from 'https://unpkg.com/three@0.142.0/examples/jsm/loaders/OBJLoader.js';
+        import { MTLLoader } from 'https://unpkg.com/three@0.142.0/examples/jsm/loaders/MTLLoader.js';
+
+        // シーン、カメラ、レンダラーを作成する関数
+        function createScene(containerId) {
+            const container = document.getElementById(containerId);
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+
+            // シーンの作成
+            const scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xeeeeee);
+
+            // カメラの作成
+            const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+            camera.position.z = 5;
+
+            // レンダラーの作成
+            const renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(width, height);
+            
+            // コンテナ内のローディング表示を削除し、レンダラーを追加
+            container.innerHTML = '';
+            container.appendChild(renderer.domElement);
+
+            // 環境光の追加
+            const ambientLight = new THREE.AmbientLight(0xcccccc, 0.4);
+            scene.add(ambientLight);
+            
+            // 指向性ライトの追加
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(1, 1, 1);
+            scene.add(directionalLight);
+
+            // コントロールの追加
+            const controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.25;
+            controls.enableZoom = true;
+
+            // レンダリング関数
+            function animate() {
+                requestAnimationFrame(animate);
+                controls.update();
+                renderer.render(scene, camera);
+            }
+
+            // リサイズ対応
+            window.addEventListener('resize', () => {
+                const width = container.clientWidth;
+                const height = container.clientHeight;
+                camera.aspect = width / height;
+                camera.updateProjectionMatrix();
+                renderer.setSize(width, height);
+            });
+
+            // アニメーションを開始
+            animate();
+
+            return { scene, camera };
+        }
+
+        // OBJファイルを読み込む関数
+        function loadOBJ(viewerId, objPath) {
+            const { scene, camera } = createScene(viewerId);
+            const loader = new OBJLoader();
+            
+            loader.load(
+                objPath, // OBJファイルのパス
+                function(object) {
+                    // オブジェクトが読み込まれたら、適切なサイズに合わせる
+                    const box = new THREE.Box3().setFromObject(object);
+                    const size = box.getSize(new THREE.Vector3());
+                    const center = box.getCenter(new THREE.Vector3());
+                    
+                    const maxDim = Math.max(size.x, size.y, size.z);
+                    const scale = 3 / maxDim;
+                    object.scale.set(scale, scale, scale);
+                    
+                    object.position.x = -center.x * scale;
+                    object.position.y = -center.y * scale;
+                    object.position.z = -center.z * scale;
+                    
+                    scene.add(object);
+                    
+                    // カメラの位置を調整
+                    camera.position.z = 5;
+                },
+                function(xhr) {
+                    // 読み込み進捗
+                    console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+                },
+                function(error) {
+                    // エラーハンドリング
+                    console.error('エラーが発生しました:', error);
+                }
+            );
+        }
+
+        // ページ読み込み時に実行
+        document.addEventListener('DOMContentLoaded', function() {
+            // 各OBJファイルのパスを指定して読み込む
+            loadOBJ('viewer1', 'obj/model1.obj');
+            loadOBJ('viewer2', 'obj/model2.obj');
+            loadOBJ('viewer3', 'obj/model3.obj');
+        });
+    </script>
+</body>
+</html>
