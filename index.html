@@ -3,17 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OBJファイルビューワー (importmap使用)</title>
+    <title>Polygon Nest</title>
     <style>
         body {
             font-family: 'Arial', sans-serif;
             margin: 0;
             padding: 20px;
-            background-color: #f5f5f5;
+            background-color: #121212;
+            color: #e0e0e0;
         }
         h1 {
             text-align: center;
-            color: #333;
+            color: #ffffff;
+            margin-bottom: 30px;
         }
         .container {
             display: flex;
@@ -29,7 +31,7 @@
         .viewer {
             width: 300px;
             height: 300px;
-            background-color: #eee;
+            background-color: #1e1e1e;
             border-radius: 5px;
             overflow: hidden;
         }
@@ -37,13 +39,14 @@
             text-align: center;
             margin-top: 10px;
             font-weight: bold;
+            color: #ffffff;
         }
         .loading {
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100%;
-            color: #666;
+            color: #999;
         }
     </style>
     <!-- importmapの設定 -->
@@ -57,25 +60,25 @@
     </script>
 </head>
 <body>
-    <h1>OBJファイルビューワー (importmap使用)</h1>
+    <h1>Polygon Nest</h1>
     <div class="container">
         <div class="viewer-container">
             <div class="viewer" id="viewer1">
                 <div class="loading">読み込み中...</div>
             </div>
-            <div class="title">モデル1</div>
+            <div class="title" id="title1">モデル1</div>
         </div>
         <div class="viewer-container">
             <div class="viewer" id="viewer2">
                 <div class="loading">読み込み中...</div>
             </div>
-            <div class="title">モデル2</div>
+            <div class="title" id="title2">モデル2</div>
         </div>
         <div class="viewer-container">
             <div class="viewer" id="viewer3">
                 <div class="loading">読み込み中...</div>
             </div>
-            <div class="title">モデル3</div>
+            <div class="title" id="title3">モデル3</div>
         </div>
     </div>
 
@@ -95,7 +98,7 @@
 
             // シーンの作成
             const scene = new THREE.Scene();
-            scene.background = new THREE.Color(0xeeeeee);
+            scene.background = new THREE.Color(0x1e1e1e); // 背景を黒っぽく
 
             // カメラの作成
             const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
@@ -110,7 +113,7 @@
             container.appendChild(renderer.domElement);
 
             // 環境光の追加
-            const ambientLight = new THREE.AmbientLight(0xcccccc, 0.4);
+            const ambientLight = new THREE.AmbientLight(0xcccccc, 0.6);
             scene.add(ambientLight);
             
             // 指向性ライトの追加
@@ -122,7 +125,8 @@
             const controls = new OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
             controls.dampingFactor = 0.25;
-            controls.enableZoom = true;
+            controls.enableZoom = false; // ズーム機能を無効化
+            controls.enablePan = false;  // パン機能も無効化
 
             // レンダリング関数
             function animate() {
@@ -146,10 +150,20 @@
             return { scene, camera };
         }
 
+        // ファイル名から拡張子を除去する関数
+        function getFilenameWithoutExtension(path) {
+            const filename = path.split('/').pop();
+            return filename.split('.')[0];
+        }
+
         // OBJファイルを読み込む関数
-        function loadOBJ(viewerId, objPath) {
+        function loadOBJ(viewerId, objPath, titleId) {
             const { scene, camera } = createScene(viewerId);
             const loader = new OBJLoader();
+            
+            // ファイル名を取得してタイトルに設定
+            const filename = getFilenameWithoutExtension(objPath);
+            document.getElementById(titleId).textContent = filename;
             
             loader.load(
                 objPath, // OBJファイルのパス
@@ -167,6 +181,17 @@
                     object.position.y = -center.y * scale;
                     object.position.z = -center.z * scale;
                     
+                    // モデルを白色に設定
+                    object.traverse(function(child) {
+                        if (child instanceof THREE.Mesh) {
+                            child.material = new THREE.MeshStandardMaterial({
+                                color: 0xffffff,
+                                roughness: 0.5,
+                                metalness: 0.2
+                            });
+                        }
+                    });
+                    
                     scene.add(object);
                     
                     // カメラの位置を調整
@@ -179,6 +204,7 @@
                 function(error) {
                     // エラーハンドリング
                     console.error('エラーが発生しました:', error);
+                    document.getElementById(titleId).textContent = 'エラー: ' + filename;
                 }
             );
         }
@@ -186,9 +212,9 @@
         // ページ読み込み時に実行
         document.addEventListener('DOMContentLoaded', function() {
             // 各OBJファイルのパスを指定して読み込む
-            loadOBJ('viewer1', 'obj/model1.obj');
-            loadOBJ('viewer2', 'obj/model2.obj');
-            loadOBJ('viewer3', 'obj/model3.obj');
+            loadOBJ('viewer1', 'obj/model1.obj', 'title1');
+            loadOBJ('viewer2', 'obj/model2.obj', 'title2');
+            loadOBJ('viewer3', 'obj/model3.obj', 'title3');
         });
     </script>
 </body>
