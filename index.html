@@ -298,7 +298,7 @@
 
             // シーンの作成
             const scene = new THREE.Scene();
-            scene.background = new THREE.Color(0xffffff); // 背景を白に
+            scene.background = new THREE.Color(0x1e1e1e); // 背景を暗い色に戻す
 
             // カメラの作成
             const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
@@ -316,19 +316,14 @@
             container.innerHTML = '';
             container.appendChild(renderer.domElement);
 
-            // 環境光の追加（より明るく、白色に近い色に）
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+            // 環境光の追加（明るさを下げる）
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
             scene.add(ambientLight);
             
-            // 指向性ライトの追加（明るく）
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
+            // 指向性ライトの追加（反射を少なくするため明るさを下げる）
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.7);
             directionalLight.position.set(1, 1, 1);
             scene.add(directionalLight);
-            
-            // 反対側からの補助ライト
-            const backLight = new THREE.DirectionalLight(0xffffff, 0.5);
-            backLight.position.set(-1, -1, -1);
-            scene.add(backLight);
 
             // コントロールの追加
             const controls = new OrbitControls(camera, renderer.domElement);
@@ -456,32 +451,6 @@
                                             if (child.material instanceof THREE.MeshPhongMaterial || 
                                                 child.material instanceof THREE.MeshStandardMaterial ||
                                                 Array.isArray(child.material)) {
-                                                
-                                                // 既存のマテリアルがある場合は、そのプロパティを調整
-                                                if (Array.isArray(child.material)) {
-                                                    // マテリアル配列の場合
-                                                    child.material.forEach(mat => {
-                                                        if (mat) {
-                                                            mat.shininess = mat.shininess || 100;
-                                                            mat.side = THREE.DoubleSide;
-                                                            
-                                                            // 色が非常に暗い場合は明るくする
-                                                            if (mat.color && mat.color.getHex() < 0x333333) {
-                                                                mat.color.setHex(0xaaaaaa);
-                                                            }
-                                                        }
-                                                    });
-                                                } else {
-                                                    // 単一マテリアルの場合
-                                                    child.material.shininess = child.material.shininess || 100;
-                                                    child.material.side = THREE.DoubleSide;
-                                                    
-                                                    // 色が非常に暗い場合は明るくする
-                                                    if (child.material.color && child.material.color.getHex() < 0x333333) {
-                                                        child.material.color.setHex(0xaaaaaa);
-                                                    }
-                                                }
-                                                
                                                 hasMaterial = true;
                                             }
                                         }
@@ -491,12 +460,8 @@
                                     if (!hasMaterial) {
                                         object.traverse(function(child) {
                                             if (child instanceof THREE.Mesh) {
-                                                child.material = new THREE.MeshStandardMaterial({
-                                                    color: 0xffffff,
-                                                    roughness: 0.3,
-                                                    metalness: 0.2,
-                                                    side: THREE.DoubleSide,
-                                                    envMapIntensity: 1.0
+                                                child.material = new THREE.MeshLambertMaterial({
+                                                    color: 0xffffff
                                                 });
                                             }
                                         });
@@ -603,12 +568,8 @@
                         // モデルを白色に設定
                         object.traverse(function(child) {
                             if (child instanceof THREE.Mesh) {
-                                child.material = new THREE.MeshStandardMaterial({
-                                    color: 0xffffff,
-                                    roughness: 1.0,
-                                    metalness: 0.0,
-                                    side: THREE.DoubleSide,
-                                    envMapIntensity: 1.0
+                                child.material = new THREE.MeshLambertMaterial({
+                                    color: 0xffffff
                                 });
                             }
                         });
