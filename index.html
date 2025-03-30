@@ -112,7 +112,6 @@
             { obj: "HOUSE-table.obj", mtl: "model4.mtl" },
             { obj: "SG-table.obj", mtl: "model5.mtl" },
             { obj: "HOUSE-toaster2.obj", mtl: "HOUSE-toaster2.mtl" },
-            { obj: "CS-icebox.obj", mtl: "CS-icebox.mtl" },
         ];
         
         // モデルを見つける
@@ -409,11 +408,9 @@
             const mtlLoader = new MTLLoader();
             mtlLoader.setPath('obj/');
             
-            // マテリアルパラメータの設定
+            // マテリアルパラメータの設定 - MTLファイルの設定を優先する
             mtlLoader.setMaterialOptions({
-                side: THREE.DoubleSide,
-                transparent: true, // 透明度を有効化
-                opacity: 1.0      // デフォルトの不透明度
+                side: THREE.DoubleSide
             });
             
             // MTLファイルを読み込む
@@ -453,34 +450,65 @@
                                     object.position.y = -center.y * scale;
                                     object.position.z = -center.z * scale;
                                     
-                                    // マテリアルがある場合は、透明度関連のプロパティを確認・調整
+                                    // マテリアルが存在する場合は、透明度をチェック・設定
                                     let hasMaterial = false;
                                     object.traverse(function(child) {
                                         if (child instanceof THREE.Mesh) {
-                                            if (child.material instanceof THREE.MeshPhongMaterial || 
-                                                child.material instanceof THREE.MeshStandardMaterial ||
-                                                child.material instanceof THREE.MeshLambertMaterial ||
-                                                Array.isArray(child.material)) {
+                                            if (child.material) {
+                                                hasMaterial = true;
                                                 
                                                 // マテリアルの処理
                                                 if (Array.isArray(child.material)) {
                                                     // マテリアル配列の場合
                                                     child.material.forEach(mat => {
                                                         if (mat) {
-                                                            // 透明度が設定されている場合は透明処理を有効化
+                                                            // MTLファイルから読み込まれたdの値を使用
+                                                            // 透明度が1.0未満の場合は透明度処理を有効化
                                                             if (mat.opacity !== undefined && mat.opacity < 1.0) {
                                                                 mat.transparent = true;
+                                                                console.log(`マテリアル ${mat.name} の透明度: ${mat.opacity}`);
+                                                            }
+                                                            
+                                                            // マテリアル名から透明度を取得する試み
+                                                            // 例: "diffuse_0_255_255_50" -> 50/255 = 約0.2の透明度
+                                                            if (mat.name && mat.name.includes('diffuse_')) {
+                                                                const parts = mat.name.split('_');
+                                                                if (parts.length >= 5) {
+                                                                    const alpha = parseInt(parts[4]);
+                                                                    if (!isNaN(alpha) && alpha < 255) {
+                                                                        // 名前に透明度情報がある場合
+                                                                        const opacity = alpha / 255;
+                                                                        mat.opacity = opacity;
+                                                                        mat.transparent = true;
+                                                                        console.log(`マテリアル ${mat.name} の名前から透明度を設定: ${opacity}`);
+                                                                    }
+                                                                }
                                                             }
                                                         }
                                                     });
                                                 } else {
                                                     // 単一マテリアルの場合
+                                                    // MTLファイルから読み込まれたdの値を使用
                                                     if (child.material.opacity !== undefined && child.material.opacity < 1.0) {
                                                         child.material.transparent = true;
+                                                        console.log(`マテリアル ${child.material.name} の透明度: ${child.material.opacity}`);
+                                                    }
+                                                    
+                                                    // マテリアル名から透明度を取得する試み
+                                                    if (child.material.name && child.material.name.includes('diffuse_')) {
+                                                        const parts = child.material.name.split('_');
+                                                        if (parts.length >= 5) {
+                                                            const alpha = parseInt(parts[4]);
+                                                            if (!isNaN(alpha) && alpha < 255) {
+                                                                // 名前に透明度情報がある場合
+                                                                const opacity = alpha / 255;
+                                                                child.material.opacity = opacity;
+                                                                child.material.transparent = true;
+                                                                console.log(`マテリアル ${child.material.name} の名前から透明度を設定: ${opacity}`);
+                                                            }
+                                                        }
                                                     }
                                                 }
-                                                
-                                                hasMaterial = true;
                                             }
                                         }
                                     });
