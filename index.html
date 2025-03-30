@@ -112,7 +112,6 @@
             { obj: "HOUSE-table.obj", mtl: "model4.mtl" },
             { obj: "SG-table.obj", mtl: "model5.mtl" },
             { obj: "HOUSE-toaster2.obj", mtl: "HOUSE-toaster2.mtl" },
-
             // 以下にファイル名を追加するだけでモデルが表示されます
             // { obj: "model5.obj", mtl: "model5.mtl" },
         ];
@@ -301,7 +300,7 @@
 
             // シーンの作成
             const scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x1e1e1e); // 背景を黒っぽく
+            scene.background = new THREE.Color(0xffffff); // 背景を白に
 
             // カメラの作成
             const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
