@@ -19,7 +19,7 @@
         }
         .container {
             display: flex;
-            justify-content: space-around;
+            justify-content: flex-start;
             flex-wrap: wrap;
             max-width: 1200px;
             margin: 0 auto;
@@ -48,6 +48,12 @@
             height: 100%;
             color: #999;
         }
+        .no-models {
+            text-align: center;
+            color: #ff5555;
+            margin: 50px auto;
+            font-size: 1.2em;
+        }
     </style>
     <!-- importmapの設定 -->
     <script type="importmap">
@@ -61,25 +67,8 @@
 </head>
 <body>
     <h1>Polygon Nest</h1>
-    <div class="container">
-        <div class="viewer-container">
-            <div class="viewer" id="viewer1">
-                <div class="loading">読み込み中...</div>
-            </div>
-            <div class="title" id="title1">モデル1</div>
-        </div>
-        <div class="viewer-container">
-            <div class="viewer" id="viewer2">
-                <div class="loading">読み込み中...</div>
-            </div>
-            <div class="title" id="title2">モデル2</div>
-        </div>
-        <div class="viewer-container">
-            <div class="viewer" id="viewer3">
-                <div class="loading">読み込み中...</div>
-            </div>
-            <div class="title" id="title3">モデル3</div>
-        </div>
+    <div class="container" id="models-container">
+        <!-- モデルビューアがここに動的に追加されます -->
     </div>
 
     <!-- モジュールスクリプト - importmapを使用 -->
@@ -89,6 +78,53 @@
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
         import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
         import { MTLLoader } from 'three/addons/loaders/MTLLoader.js';
+
+        // モデルリスト - objフォルダ内のすべてのOBJファイル
+        // この配列を変更するだけで表示されるモデルを制御できます
+        const modelList = [
+            "model1.obj",
+            "model2.obj",
+            "model3.obj",
+            // 以下にファイル名を追加するだけでモデルが表示されます
+            // "model4.obj",
+            // "model5.obj"
+        ];
+        
+        // モデルを見つける（後で動的に変更できるようにするため）
+        findModels();
+
+        // モデルを検索して表示する関数
+        async function findModels() {
+            const container = document.getElementById('models-container');
+            
+            // モデルリストが空の場合のメッセージ
+            if (modelList.length === 0) {
+                container.innerHTML = '<div class="no-models">表示するモデルが見つかりません。</div>';
+                return;
+            }
+            
+            // モデルを順番に読み込む
+            for (let i = 0; i < modelList.length; i++) {
+                const filename = modelList[i];
+                const objPath = `obj/${filename}`;
+                
+                // 新しいビューアコンテナを作成
+                const viewerId = `viewer-${i}`;
+                const titleId = `title-${i}`;
+                const viewerContainer = document.createElement('div');
+                viewerContainer.className = 'viewer-container';
+                viewerContainer.innerHTML = `
+                    <div class="viewer" id="${viewerId}">
+                        <div class="loading">読み込み中...</div>
+                    </div>
+                    <div class="title" id="${titleId}">${getFilenameWithoutExtension(filename)}</div>
+                `;
+                container.appendChild(viewerContainer);
+                
+                // OBJファイルをロード
+                loadOBJ(viewerId, objPath, titleId);
+            }
+        }
 
         // シーン、カメラ、レンダラーを作成する関数
         function createScene(containerId) {
@@ -161,10 +197,6 @@
             const { scene, camera } = createScene(viewerId);
             const loader = new OBJLoader();
             
-            // ファイル名を取得してタイトルに設定
-            const filename = getFilenameWithoutExtension(objPath);
-            document.getElementById(titleId).textContent = filename;
-            
             loader.load(
                 objPath, // OBJファイルのパス
                 function(object) {
@@ -199,23 +231,20 @@
                 },
                 function(xhr) {
                     // 読み込み進捗
-                    console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+                    const loadingPercentage = Math.floor(xhr.loaded / xhr.total * 100);
+                    const loadingEl = document.querySelector(`#${viewerId} .loading`);
+                    if (loadingEl) {
+                        loadingEl.textContent = `読み込み中... ${loadingPercentage}%`;
+                    }
                 },
                 function(error) {
                     // エラーハンドリング
                     console.error('エラーが発生しました:', error);
-                    document.getElementById(titleId).textContent = 'エラー: ' + filename;
+                    document.getElementById(viewerId).innerHTML = 
+                        '<div class="loading" style="color: #ff5555;">モデルの読み込みに失敗しました</div>';
                 }
             );
         }
-
-        // ページ読み込み時に実行
-        document.addEventListener('DOMContentLoaded', function() {
-            // 各OBJファイルのパスを指定して読み込む
-            loadOBJ('viewer1', 'obj/model1.obj', 'title1');
-            loadOBJ('viewer2', 'obj/model2.obj', 'title2');
-            loadOBJ('viewer3', 'obj/model3.obj', 'title3');
-        });
     </script>
 </body>
 </html>
